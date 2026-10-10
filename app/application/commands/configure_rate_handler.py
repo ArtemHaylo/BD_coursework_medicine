@@ -2,10 +2,9 @@
 from __future__ import annotations
 
 from app.application.dto.monitoring import RateConfigDto
+from app.application.constants import RATE_KEY  # noqa: F401
 from app.application.ports.inbound.configure_rate import ConfigureRate
 from app.domain.ports.outbound import CacheStore
-
-RATE_KEY = "config:rate"
 
 
 class ConfigureRateHandler(ConfigureRate):

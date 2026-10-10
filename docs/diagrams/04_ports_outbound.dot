@@ -1,0 +1,33 @@
+digraph ports_out {
+  rankdir=LR;
+  graph [fontname="DejaVu Sans", fontsize=11, labelloc=t, pad=0.3, nodesep=0.35, ranksep=0.7];
+  node [fontname="DejaVu Sans", fontsize=10];
+  edge [fontname="DejaVu Sans", fontsize=9, color="#555555"];
+  graph [nodesep=0.12, ranksep=1.0];
+  label=<<B>Вихідні порти: адаптери баз даних і черги</B><BR/><FONT POINT-SIZE="10">схему згенеровано з коду: 10.10.2026</FONT><BR/><FONT POINT-SIZE="9">суцільна стрілка: залежність через конструктор; пунктир із порожнім трикутником: реалізація порту; крапки: використання DTO / створення в Container</FONT>>;
+    "BatchSource" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#EBE3F7" COLOR="#6A4BA3"><TR><TD><FONT POINT-SIZE="9"><I>«protocol»</I></FONT></TD></TR><TR><TD><B>BatchSource</B></TD></TR></TABLE>>];
+    "CacheStore" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FFF3D6" COLOR="#B8860B"><TR><TD><FONT POINT-SIZE="9"><I>«outbound port»</I></FONT></TD></TR><TR><TD><B>CacheStore</B></TD></TR></TABLE>>];
+    "DocumentRepository" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FFF3D6" COLOR="#B8860B"><TR><TD><FONT POINT-SIZE="9"><I>«outbound port»</I></FONT></TD></TR><TR><TD><B>DocumentRepository</B></TD></TR></TABLE>>];
+    "GraphRepository" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FFF3D6" COLOR="#B8860B"><TR><TD><FONT POINT-SIZE="9"><I>«outbound port»</I></FONT></TD></TR><TR><TD><B>GraphRepository</B></TD></TR></TABLE>>];
+    "IngestWorker" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#EBE3F7" COLOR="#6A4BA3"><TR><TD><FONT POINT-SIZE="9"><I>«process»</I></FONT></TD></TR><TR><TD><B>IngestWorker</B></TD></TR></TABLE>>];
+    "LoadGenerator" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#EBE3F7" COLOR="#6A4BA3"><TR><TD><FONT POINT-SIZE="9"><I>«process»</I></FONT></TD></TR><TR><TD><B>LoadGenerator</B></TD></TR></TABLE>>];
+    "MetricsSink" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FFF3D6" COLOR="#B8860B"><TR><TD><FONT POINT-SIZE="9"><I>«outbound port»</I></FONT></TD></TR><TR><TD><B>MetricsSink</B></TD></TR></TABLE>>];
+    "MongoDocumentAdapter" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FBE3E3" COLOR="#B23A3A"><TR><TD><FONT POINT-SIZE="9"><I>«adapter»</I></FONT></TD></TR><TR><TD><B>MongoDocumentAdapter</B></TD></TR></TABLE>>];
+    "MongoMetricsAdapter" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FBE3E3" COLOR="#B23A3A"><TR><TD><FONT POINT-SIZE="9"><I>«adapter»</I></FONT></TD></TR><TR><TD><B>MongoMetricsAdapter</B></TD></TR></TABLE>>];
+    "Neo4jGraphAdapter" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FBE3E3" COLOR="#B23A3A"><TR><TD><FONT POINT-SIZE="9"><I>«adapter»</I></FONT></TD></TR><TR><TD><B>Neo4jGraphAdapter</B></TD></TR></TABLE>>];
+    "QueueAdapter" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FBE3E3" COLOR="#B23A3A"><TR><TD><FONT POINT-SIZE="9"><I>«adapter»</I></FONT></TD></TR><TR><TD><B>QueueAdapter</B></TD></TR></TABLE>>];
+    "QueuePublisher" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FFF3D6" COLOR="#B8860B"><TR><TD><FONT POINT-SIZE="9"><I>«outbound port»</I></FONT></TD></TR><TR><TD><B>QueuePublisher</B></TD></TR></TABLE>>];
+    "RedisCacheAdapter" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FBE3E3" COLOR="#B23A3A"><TR><TD><FONT POINT-SIZE="9"><I>«adapter»</I></FONT></TD></TR><TR><TD><B>RedisCacheAdapter</B></TD></TR></TABLE>>];
+    "SearchIndex" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FFF3D6" COLOR="#B8860B"><TR><TD><FONT POINT-SIZE="9"><I>«outbound port»</I></FONT></TD></TR><TR><TD><B>SearchIndex</B></TD></TR></TABLE>>];
+    "SearchIndexAdapter" [shape=plaintext, label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#FBE3E3" COLOR="#B23A3A"><TR><TD><FONT POINT-SIZE="9"><I>«adapter»</I></FONT></TD></TR><TR><TD><B>SearchIndexAdapter</B></TD></TR></TABLE>>];
+  "IngestWorker" -> "BatchSource" [arrowhead=vee];
+  "LoadGenerator" -> "QueuePublisher" [arrowhead=vee];
+  "LoadGenerator" -> "CacheStore" [arrowhead=vee];
+  "MongoDocumentAdapter" -> "DocumentRepository" [style=dashed, arrowhead=empty];
+  "MongoMetricsAdapter" -> "MetricsSink" [style=dashed, arrowhead=empty];
+  "Neo4jGraphAdapter" -> "GraphRepository" [style=dashed, arrowhead=empty];
+  "QueueAdapter" -> "QueuePublisher" [style=dashed, arrowhead=empty];
+  "RedisCacheAdapter" -> "CacheStore" [style=dashed, arrowhead=empty];
+  "SearchIndexAdapter" -> "SearchIndex" [style=dashed, arrowhead=empty];
+  "QueueAdapter" -> "BatchSource" [style=dashed, arrowhead=empty, label="структурно"];
+}

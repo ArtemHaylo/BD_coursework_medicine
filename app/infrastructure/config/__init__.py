@@ -1,9 +1,10 @@
-"""Композиційний корінь і налаштування.
+"""Композиційний корінь (container.py).
 
-Container навмисно не реекспортується тут: він імпортує всі адаптери, а адаптери
-(наприклад, logging_config) імпортують settings з цього пакета -> був би цикл.
-Використовуйте: from app.infrastructure.config.container import Container
+Container навмисно не реекспортується тут: використовуйте
+    from app.infrastructure.config.container import Container
+Налаштування (Settings) лежать в app/infrastructure/settings.py, щоб адаптери
+не залежали від композиційного кореня.
 """
-from app.infrastructure.config.settings import Settings, load_settings
+from app.infrastructure.settings import Settings, load_settings
 
 __all__ = ["Settings", "load_settings"]

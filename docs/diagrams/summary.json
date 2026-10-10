@@ -1,0 +1,26 @@
+{
+  "date": "10.10.2026",
+  "modules": 60,
+  "classes": 78,
+  "by_kind": {
+    "adapter": 6,
+    "container": 1,
+    "controller": 5,
+    "dto": 16,
+    "entity": 6,
+    "exception": 3,
+    "handler": 10,
+    "inbound_port": 10,
+    "outbound_port": 6,
+    "protocol": 1,
+    "service": 3,
+    "settings": 8,
+    "value": 1,
+    "worker": 2
+  },
+  "port_implementations": 17,
+  "package_edges": 33,
+  "violations": [],
+  "cycles": [],
+  "contract_problems": []
+}
