@@ -1,0 +1,22 @@
+mongo:
+  uri: mongodb://localhost:27017
+  database: medicine
+elastic:
+  url: http://localhost:9200
+  index: medicines
+neo4j:
+  uri: bolt://localhost:7687
+  user: neo4j
+  password: change_me      # реальне значення - у .env
+redis:
+  url: redis://localhost:6379
+  search_ttl_seconds: 60
+rabbit:
+  url: amqp://guest:guest@localhost:5672/
+  queue: medicine.ingest
+  prefetch: 10
+  max_length: 1000
+ingest:
+  batch_size: 5000
+logging:
+  level: INFO              # ERROR / WARNING / INFO / DEBUG
