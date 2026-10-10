@@ -36,8 +36,8 @@ pip install -r requirements.txt
 
 ## Статус
 - [x] Скелет каталогів
-- [ ] Domain
-- [ ] Application
-- [ ] Infrastructure
-- [ ] Presentation
-- [ ] Workers
+- [x] Domain
+- [x] Application
+- [x] Infrastructure
+- [x] Presentation
+- [x] Workers
