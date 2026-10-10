@@ -124,6 +124,18 @@ CRUD-репозиторії: `DocumentRepository` (препарати, MongoDB),
 | результат пошуку | `SearchResult`, `SearchItem` (DTO) | відповідь API |
 | «Аналог» | ребро `МАЄ_АНАЛОГ`; `AnalogueDto` | окремої сутності немає: самозв'язок «багато до багатьох» |
 
+## Схеми архітектури
+
+Схеми зв'язків між модулями та класами генеруються з коду (не малюються вручну):
+
+```
+python scripts/architecture_diagrams.py
+```
+
+Потрібен Graphviz (`dot`). Результат і огляд архітектури (станом на 10.10.2026):
+[`docs/architecture/`](docs/architecture/README.md). Для звіту підготовлено розділ
+3.11 у `docs/architecture/report_section_3_11.docx`.
+
 ## Застосовані патерни
 
 | Патерн | Де | Навіщо |
