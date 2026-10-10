@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.domain.entities import Medicine, SearchLogEntry
-from app.domain.ports.outbound import DocumentRepository
+from app.domain.ports.outbound import DiseaseRepository, DocumentRepository, SymptomRepository
 
 DOMAIN = Path(__file__).resolve().parents[2] / "app" / "domain"
 FORBIDDEN = ("app.application", "app.infrastructure", "app.presentation", "workers")
@@ -37,8 +37,16 @@ def test_search_log_status():
 
 
 def test_ports_are_abstract():
-    try:
-        DocumentRepository()
-    except TypeError:
-        return
-    raise AssertionError("порт має бути абстрактним")
+    for port in (DocumentRepository, DiseaseRepository, SymptomRepository):
+        try:
+            port()
+        except TypeError:
+            continue
+        raise AssertionError(f"порт {port.__name__} має бути абстрактним")
+
+
+def test_reference_repositories_have_crud():
+    """Довідники Хвороба/Симптом мають повний набір CRUD-операцій."""
+    crud = {"create", "get_by_id", "get_by_name", "list_all", "update", "delete"}
+    for port in (DiseaseRepository, SymptomRepository):
+        assert crud <= set(port.__abstractmethods__), port.__name__

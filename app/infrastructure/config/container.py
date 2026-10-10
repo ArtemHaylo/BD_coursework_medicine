@@ -17,7 +17,8 @@ from app.infrastructure.config.settings import Settings
 from app.infrastructure.messaging import QueueAdapter
 from app.infrastructure.observability import MongoMetricsAdapter
 from app.infrastructure.persistence import (
-    MongoDocumentAdapter, Neo4jGraphAdapter, RedisCacheAdapter, SearchIndexAdapter,
+    MongoDocumentAdapter, Neo4jDiseaseAdapter, Neo4jGraphAdapter, Neo4jSymptomAdapter,
+    RedisCacheAdapter, SearchIndexAdapter,
 )
 
 
@@ -27,12 +28,15 @@ class Container:
         self.documents: MongoDocumentAdapter | None = None
         self.search_index: SearchIndexAdapter | None = None
         self.graph: Neo4jGraphAdapter | None = None
+        self.diseases: Neo4jDiseaseAdapter | None = None
+        self.symptoms: Neo4jSymptomAdapter | None = None
         self.cache: RedisCacheAdapter | None = None
         self.metrics: MongoMetricsAdapter | None = None
         self.queue: QueueAdapter | None = None
 
     async def start(self) -> None:
-        """Створює клієнти (Mongo, ES, Neo4j, Redis, RabbitMQ) та адаптери; ensure_* для індексів."""
+        """Створює клієнти (Mongo, ES, Neo4j, Redis, RabbitMQ) та адаптери (зокрема
+        Neo4jDiseaseAdapter і Neo4jSymptomAdapter на спільному драйвері); ensure_* для індексів."""
         raise NotImplementedError
 
     async def close(self) -> None:
