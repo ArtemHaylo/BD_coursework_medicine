@@ -1,0 +1,55 @@
+digraph modules {
+  graph [rankdir=TB, fontname="DejaVu Sans", fontsize=16, nodesep=0.3, ranksep=0.7, label="Залежності між модулями (станом на 10.10.2026)", labelloc=t, compound=true];
+  node [shape=box, style="rounded,filled", fillcolor=white, fontname="DejaVu Sans", fontsize=14];
+  edge [fontname="DejaVu Sans", fontsize=11, color="#555555"];
+  subgraph cluster_application { label="Application"; style=filled; color="#e6f4ea"; fontname="DejaVu Sans"; fontsize=14;
+    "application.commands" [label="commands"];
+    "application.dto" [label="dto"];
+    "application.mappers" [label="mappers"];
+    "application.ports.inbound" [label="ports.inbound"];
+    "application.queries" [label="queries"];
+  }
+  subgraph cluster_domain { label="Domain"; style=filled; color="#fff4e0"; fontname="DejaVu Sans"; fontsize=14;
+    "domain.entities" [label="entities"];
+    "domain.ports.outbound" [label="ports.outbound"];
+    "domain.services" [label="services"];
+  }
+  subgraph cluster_infrastructure { label="Infrastructure"; style=filled; color="#fce8e6"; fontname="DejaVu Sans"; fontsize=14;
+    "infrastructure.config" [label="config"];
+    "infrastructure.messaging" [label="messaging"];
+    "infrastructure.observability" [label="observability"];
+    "infrastructure.persistence" [label="persistence"];
+  }
+  subgraph cluster_presentation { label="Presentation"; style=filled; color="#e8f0fe"; fontname="DejaVu Sans"; fontsize=14;
+    "presentation.rest" [label="rest"];
+    "presentation.stream" [label="stream"];
+  }
+  subgraph cluster_workers { label="Workers (окремі процеси)"; style=filled; color="#f1e8fb"; fontname="DejaVu Sans"; fontsize=14;
+    "workers.generator" [label="generator"];
+    "workers.ingest_worker" [label="ingest_worker"];
+  }
+  "application.commands" -> "domain.ports.outbound" [label="5"];
+  "application.commands" -> "domain.services" [label="3"];
+  "application.mappers" -> "domain.entities" [label="2"];
+  "application.queries" -> "domain.ports.outbound" [label="5"];
+  "application.queries" -> "domain.services" [label="1"];
+  "infrastructure.config" -> "application.commands" [label="1"];
+  "infrastructure.config" -> "application.queries" [label="1"];
+  "infrastructure.config" -> "infrastructure.messaging" [label="1"];
+  "infrastructure.config" -> "infrastructure.observability" [label="1"];
+  "infrastructure.config" -> "infrastructure.persistence" [label="1"];
+  "infrastructure.messaging" -> "domain.ports.outbound" [label="1"];
+  "infrastructure.observability" -> "domain.entities" [label="1"];
+  "infrastructure.observability" -> "domain.ports.outbound" [label="1"];
+  "infrastructure.observability" -> "infrastructure.config" [label="1", color="#d93025", fontcolor="#d93025", penwidth=2];
+  "infrastructure.persistence" -> "domain.entities" [label="5"];
+  "infrastructure.persistence" -> "domain.ports.outbound" [label="6"];
+  "presentation.rest" -> "application.dto" [label="4"];
+  "presentation.rest" -> "application.ports.inbound" [label="4"];
+  "presentation.stream" -> "application.dto" [label="1"];
+  "presentation.stream" -> "application.ports.inbound" [label="1"];
+  "workers.generator" -> "application.commands" [label="1"];
+  "workers.generator" -> "domain.ports.outbound" [label="1"];
+  "workers.ingest_worker" -> "application.ports.inbound" [label="1"];
+  "presentation.stream" -> "workers.ingest_worker" [style=invis];
+}

@@ -1,4 +1,9 @@
-"""DTO пошуку: SearchQuery (вхід) і SearchResult (вихід)."""
+"""DTO пошуку: SearchQuery (вхід) і SearchResult (вихід).
+
+SearchQuery - параметри одного запиту користувача (не зберігається). Збережений
+запис про виконаний запит - сутність SearchLogEntry («Пошуковий запит» у звіті,
+табл. 2.4); її створює SearchMedicinesHandler через порт MetricsSink.
+"""
 from __future__ import annotations
 
 from typing import Any
