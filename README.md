@@ -125,8 +125,17 @@ workers ── через порти ──────────────�
 
 Датасет «250k Medicines Usage, Side Effects and Substitutes» (Kaggle) у
 репозиторій не комітиться (див. `.gitignore`). Файл `medicine_dataset.csv`
-кладуть у корінь, скрипт підготовки з Додатка А звіту розміщують у
-`scripts/process_dataset.py`; результат потрапляє в `prepared/`.
+кладуть у корінь проєкту, після чого запускають скрипт підготовки
+(Додаток А звіту):
+
+```
+python scripts/process_dataset.py
+```
+
+Скрипт виводить аудит датасету (цифри розділу 2.1.1) і створює в `prepared/`
+файли для кожного сховища (табл. 2.8): `medicines.jsonl`, `search_docs.jsonl`,
+`diseases.csv`, `symptoms.csv`, `treats.csv`, `causes.csv`, `analogs.csv`,
+`search_queries.csv`. Генерація відсутніх полів відтворювана (`seed = 42`).
 
 ## Статус
 
