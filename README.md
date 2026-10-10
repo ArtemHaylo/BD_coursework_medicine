@@ -8,161 +8,211 @@
 КПІ ім. Ігоря Сікорського, ФПМ, група КМ-42.
 Автори: Запорожець А. А., Коваль Д. С., Бойко Д. А., Хайло А. Р.
 
-## Скелет застосунку
+## Про проєкт
 
-Класи за архітектурою розділу 3 звіту: шари, порти й адаптери, CQRS.
-Тіла методів поки оголошені як `NotImplementedError`: фіксуються структура
-та контракти. Реалізація (адаптери баз даних, обробники, генератор) буде
-додана на наступних етапах. Запуск у контейнерах (Docker Compose) теж
-буде на одному з наступних етапів.
+Довідник лікарських препаратів (датасет Kaggle, 222 825 препаратів після очищення) з
+повнотекстовим пошуком за інструкціями, фільтрацією, пошуком аналогів і панеллю моніторингу.
+Дані зберігаються в поліглотному сховищі, кожна БД обслуговує свій тип запитів:
 
-Поліглотне сховище: MongoDB (3 шарди), Elasticsearch, Neo4j, Redis.
-Черга повідомлень: RabbitMQ. Стек: Python 3.11+, asyncio, FastAPI, Pydantic.
+| Сховище | Що зберігає | Для яких запитів |
+|---|---|---|
+| MongoDB (3 шарди) | картки препаратів, журнал пошуку | картка за id, фільтрація, агрегація |
+| Elasticsearch | `full_description` (показання, побічні ефекти, механізм дії) | повнотекстовий пошук |
+| Neo4j | вузли Medicine, Disease, Symptom і ребра між ними | аналоги, «аналог без побічного ефекту X» |
+| Redis | результати пошуку, ключ `config:rate` | кеш, керування швидкістю генератора |
 
-## Перевірка
+Між генератором і записом у БД стоїть черга RabbitMQ.
+Стек: Python 3.11+, asyncio, FastAPI, Pydantic, Docker.
 
+**Поточний стан (10.10.2026).** Архітектура, класи й контракти готові. Тіла методів поки
+`NotImplementedError`. Реалізовано: підготовку датасету, автоматичні тести архітектури,
+генератор схем із коду та Docker-стенд (власний образ + MongoDB).
+
+## Архітектура
+
+Шарова + гексагональна архітектура (порти й адаптери) + CQRS. Три незалежні процеси:
+**API** (читання), **generator** (публікує пакети в чергу), **ingest_worker** (пише з черги в БД).
+
+```
+presentation ──> application ──> domain <── infrastructure
+   (REST, SSE)     (вхідні порти,   (сутності,   (адаптери БД,
+                    обробники,       служби,      черга, логування)
+                    DTO)             вихідні порти)
+                                        ^
+workers ── через порти ─────────────────┘      infrastructure/config/container.py
+                                               збирає все разом
+```
+
+Правило: залежності спрямовані до домену, домен не імпортує нічого. Правило перевіряють
+тести та скрипт `tools/arch_diagrams.py --check`.
+
+Схеми згенеровано з коду (дата стоїть на кожній), каталог `docs/diagrams/`:
+
+| Файл | Що показує | У звіті |
+|---|---|---|
+| `01_modules.png` | залежності між модулями | рис. 3.8 |
+| `02_domain_model.png` | доменна модель | — |
+| `03_ports_inbound.png`, `04_ports_outbound.png` | вхідні та вихідні порти | — |
+| `05_search_slice.png` | зріз «Пошук препаратів» | рис. 3.4 |
+| `06_ingest_slice.png` | зріз «Запис документів» | рис. 3.7 |
+| `07_card_slice.png` | зріз «Картка препарату» (ланцюжок п. 4) | рис. 3.5 |
+
+### Ланцюжок Controller → Facade → Service → Repository
+
+| Роль | Приклад із завдання | У проєкті |
+|---|---|---|
+| Контролер | `MovieController` | `MedicineController`, `SearchController`, `AnaloguesController`, `RateController` |
+| Фасад | `MovieFacade` | вхідні порти `ListMedicines`, `GetMedicineCard`, `CreateMedicine`, `UpdateMedicine`, `DeleteMedicine`… |
+| Сервіси | `MovieInformationService`, `MoviePictureService` | обробники `*Handler` + доменні служби `QueryNormalizer`, `DocumentValidator`, `ShardKeyService` |
+| Репозиторії | `MovieInformationRepository`, `MoviePictureRepository` | `DocumentRepository` (CRUD), `GraphRepository`, `SearchIndex`, `CacheStore`: окремий для кожного сховища |
+| Реалізації | — | `MongoDocumentAdapter`, `Neo4jGraphAdapter`, `SearchIndexAdapter`, `RedisCacheAdapter` |
+
+Окремого класу-фасаду немає: його роль виконують вхідні порти (детальніше: звіт, п. 3.6.2).
+
+### Цифри (з `docs/diagrams/summary.json`)
+
+61 модуль, 78 класів: 6 сутностей, 3 доменні служби, 10 вхідних і 6 вихідних портів,
+10 обробників, 16 DTO, 6 адаптерів, 5 контролерів, 2 процеси; 17 реалізацій портів;
+порушень правила залежностей і циклів немає.
+
+## Структура репозиторію
+
+```
+app/
+  domain/           сутності, доменні служби, вихідні порти, винятки
+  application/      вхідні порти, commands/ і queries/ (CQRS), DTO, mappers.py
+  infrastructure/   адаптери persistence/, messaging/, observability/; config/ = Container
+  presentation/     rest/ (контролери), stream/ (SSE)
+  main.py           точка входу API
+workers/            generator.py, ingest_worker.py: окремі процеси
+scripts/            process_dataset.py: підготовка датасету (Додаток А звіту)
+tools/              arch_diagrams.py: схеми з коду + перевірка архітектури
+tests/unit/         автоматичні тести архітектури (18)
+docker/             Dockerfile, docker-compose.smoke.yml, smoke_check.py
+docs/diagrams/      згенеровані схеми
+prepared/           підготовлені файли для БД (не в git)
+```
+
+## Як запустити й перевірити
+
+Потрібно: **Git**, **Docker Desktop** (на Windows працює через WSL 2), за бажанням **Python 3.11+**.
 Усі команди виконуються в корені проєкту.
 
 ```
+git clone https://github.com/ArtemHaylo/BD_coursework_medicine.git
+cd BD_coursework_medicine
+```
+
+### 1. Docker-стенд: власний образ + MongoDB (п. 6 завдання)
+
+Контейнер `app` (образ `medicine-app:0.1` з кодом проєкту) підключається до контейнера `mongo`,
+записує препарат, читає його назад і порівнює. Логи пишуться в консоль і у файл `logs/smoke.log`
+на вашому комп'ютері (bind mount), тому лишаються після видалення контейнерів.
+
+```
+docker compose -f docker/docker-compose.smoke.yml up --build --attach app --exit-code-from app
+```
+
+- `--build` збирає образ (перший раз кілька хвилин, далі можна без цього прапорця);
+- `--attach app` показує лише логи нашого контейнера (MongoDB пише багато службових рядків);
+- `--exit-code-from app` зупиняє все, коли `app` завершився, і повертає його код виходу.
+
+Очікуваний вивід:
+
+```
+smoke-app  | ... | INFO    | MongoDB відповідає (спроба 1, uri=mongodb://mongo:27017)
+smoke-app  | ... | INFO    | ЗАПИС: id=... name='smoke-test medicine'
+smoke-app  | ... | INFO    | ЧИТАННЯ: id=... name='smoke-test medicine' price=100.0
+smoke-app  | ... | INFO    | ПОРІВНЯННЯ: записане і прочитане збігаються
+smoke-app  | ... | INFO    | У колекції smoke.checks тепер 1 запис(ів)
+smoke-app exited with code 0
+```
+
+Перевірити, що логи пережили видалення контейнерів:
+
+```
+docker compose -f docker/docker-compose.smoke.yml down
+Get-Content logs\smoke.log -Encoding UTF8      # Windows PowerShell
+cat logs/smoke.log                             # Linux / macOS / Git Bash
+```
+
+Без `-Encoding UTF8` старий PowerShell показує кирилицю «кракозябрами»: файл при цьому правильний.
+Час у логах за UTC. Під час повторного запуску лічильник записів зростає (2, 3, …): дані MongoDB
+лежать в іменованому томі `mongo_data`. Прибрати все разом із даними:
+
+```
+docker compose -f docker/docker-compose.smoke.yml down -v
+```
+
+### 2. Тести
+
+Варіант без встановлення Python, у тому самому образі (код проєкту монтується в контейнер):
+
+```
+docker run --rm -v "${PWD}:/app" medicine-app:0.1 python -m pytest tests/unit -q
+```
+
+`${PWD}` працює в PowerShell і bash; у `cmd` замініть на `%cd%`.
+
+Варіант з локальним Python:
+
+```
 python -m venv .venv
-source .venv/bin/activate          # Windows (PowerShell): .venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1          # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 python -m pytest tests/unit -q
 ```
 
-Тести проходять без піднятих баз даних: адаптери в них лише створюються,
-з'єднання з БД не відкриваються. Очікуваний результат: `14 passed`.
-
-П'ять файлів тестів стежать за архітектурою автоматично:
+Очікуваний результат: `18 passed`. Тести не потребують запущених БД.
 
 | Тест | Що гарантує |
 |---|---|
-| `test_domain.py` | домен не імпортує жодного зовнішнього шару; сутності мають коректні значення за замовчуванням; порти абстрактні |
+| `test_domain.py` | домен не імпортує жодного зовнішнього шару; сутності й порти коректні |
 | `test_application.py` | `application` не імпортує `infrastructure`, `presentation`, `workers`; кожен обробник реалізує вхідний порт |
-| `test_infrastructure.py` | кожен адаптер реалізує всі методи свого вихідного порту (інакше `TypeError` при створенні); адаптери не імпортують `application` і `presentation` |
-| `test_presentation.py` | усі очікувані REST-маршрути зареєстровані; контролери не імпортують `infrastructure` |
-| `test_workers.py` | воркери створюються з портів і не імпортують конкретні адаптери |
+| `test_infrastructure.py` | кожен адаптер реалізує всі методи свого порту; адаптери не імпортують `application` і `presentation` |
+| `test_presentation.py` | усі REST-маршрути зареєстровані; контролери не імпортують `infrastructure` |
+| `test_workers.py` | воркери створюються з портів і не залежать від конкретних адаптерів |
+| `test_diagrams.py` | немає порушень шарів і циклів; кожен порт має реалізацію; схеми будуються з коду з датою |
 
-## Схема шарів
+### 3. Схеми архітектури з коду
 
 ```
-presentation ──> application ──> domain <── infrastructure
-   (REST, SSE)     (порти in,      (сутності,   (адаптери БД,
-                    обробники,      сервіси,     черга, логування)
-                    DTO)            порти out)
-                                        ^
-workers ── через порти ─────────────────┘      config/container.py
-                                               збирає все разом
+python tools/arch_diagrams.py --check                          # лише перевірка, код 1 при порушеннях
+python tools/arch_diagrams.py --out docs/diagrams --date 10.10.2026
 ```
 
-Правило: залежності спрямовані до домену. Домен не імпортує нічого.
+Потрібен лише Python; для PNG/SVG ще Graphviz (`dot`), без нього створюються `.dot` і `summary.json`.
 
-## Розкладка
+### 4. Підготовка датасету
 
-| Каталог | Шар | Залежить від |
-|---|---|---|
-| `app/domain` | предметна область | нічого |
-| `app/application` | сценарії, вхідні порти, DTO | `domain` |
-| `app/infrastructure` | адаптери БД, черги, логування | `domain` |
-| `app/infrastructure/config` | композиційний корінь, налаштування | усі шари |
-| `app/presentation` | REST-контролери, SSE | `application` (і доменні винятки) |
-| `app/main.py` | точка входу API-процесу | усі шари |
-| `workers` | окремі процеси: generator, ingest_worker | порти `domain` і `application`; `Container` лише в `main()` |
-| `tests/unit` | модульні тести | |
-| `tests/integration` | інтеграційні тести з реальними БД (на наступних етапах) | |
-| `scripts` | підготовка датасету (Додаток А звіту) | |
-| `prepared` | підготовлені файли для завантаження (не в git) | |
-
-## Розміщення портів
-
-Вихідні порти (`app/domain/ports/outbound/`) оголошені в доменному шарі:
-без цього неможлива інверсія залежності від сховищ. Їх шість: `DocumentRepository`,
-`SearchIndex`, `GraphRepository`, `CacheStore`, `MetricsSink`, `QueuePublisher`.
-
-Вхідні порти (`app/application/ports/inbound/`) оголошені в шарі сценаріїв,
-бо їхній контракт оперує DTO, а не доменними сутностями. Їх десять:
-`SearchMedicines`, `GetMedicineCard`, `GetAnalogues`, `ListMedicines`,
-`IngestDocument`, `ConfigureRate`, `GetStats`, `CreateMedicine`,
-`UpdateMedicine`, `DeleteMedicine`.
-
-Назви обробників (`SearchMedicinesHandler` тощо) збережено з розділу 3 звіту;
-це application-сервіси.
-
-## Класи за шарами
-
-| Шар | Класи | Роль |
-|---|---|---|
-| Domain, сутності | `Medicine`, `Disease`, `Symptom`, `SearchLogEntry`, `SearchDocument`, `SearchHit` | предметна модель |
-| Domain, служби | `QueryNormalizer`, `DocumentValidator`, `ShardKeyService`, `ShardKey` | правила, що не належать жодній сутності |
-| Domain, порти | `DocumentRepository`, `SearchIndex`, `GraphRepository`, `CacheStore`, `MetricsSink`, `QueuePublisher` | контракти до сховищ |
-| Application, команди | `IngestDocumentHandler`, `ConfigureRateHandler`, `CreateMedicineHandler`, `UpdateMedicineHandler`, `DeleteMedicineHandler` | шлях запису |
-| Application, запити | `SearchMedicinesHandler`, `GetMedicineCardHandler`, `GetAnaloguesHandler`, `ListMedicinesHandler`, `GetStatsHandler` | шлях читання |
-| Application, DTO | `SearchQuery`, `SearchResult`, `MedicineCard`, `MedicineCreateDto`, `MedicineUpdateDto`, `AnalogueDto`, `IngestBatchDto`, `RateConfigDto`, `StatsDto` та ін. (16) | межові об'єкти передачі даних |
-| Infrastructure | `MongoDocumentAdapter`, `SearchIndexAdapter`, `Neo4jGraphAdapter`, `RedisCacheAdapter`, `MongoMetricsAdapter`, `QueueAdapter` | реалізації портів |
-| Infrastructure, config | `Container`, `Settings` | композиційний корінь, налаштування |
-| Presentation | `SearchController`, `MedicineController`, `AnaloguesController`, `RateController`, `StatsStreamController` | REST і SSE |
-| Workers | `LoadGenerator`, `IngestWorker` | окремі процеси |
-
-Стан на 10.10.2026: 59 модулів, 78 класів, 10 вхідних і 6 вихідних портів,
-10 обробників, 14 автоматичних тестів.
-
-## Застосовані патерни
-
-| Патерн | Де | Навіщо |
-|---|---|---|
-| Порти й адаптери | `domain/ports`, `application/ports`, `infrastructure` | заміна сховища без дотику до логіки |
-| CRUD-репозиторій | `DocumentRepository` | єдиний контракт створення, читання, оновлення, видалення |
-| CQRS | `application/commands`, `application/queries` | різні шляхи й моделі для запису та читання |
-| DTO | `application/dto` | межові об'єкти, що не тягнуть доменні сутності |
-| Відображення | `application/mappers.py` | перетворення Domain ↔ DTO в одному місці |
-| Доменна служба | `domain/services` | правила, що не належать жодній сутності |
-| Об'єкт-значення | `ShardKey` | незмінний складений ключ шардінгу |
-| Композиційний корінь | `infrastructure/config/container.py` | єдине місце, що знає конкретні реалізації |
-| Протокол (структурна типізація) | `BatchSource` у `workers/ingest_worker.py` | воркер не залежить від конкретного адаптера черги |
-| Черга повідомлень | `QueueAdapter` | розв'язує різницю швидкостей генератора й запису |
-
-## Підготовка даних
-
-Датасет «250k Medicines Usage, Side Effects and Substitutes» (Kaggle) у
-репозиторій не комітиться (див. `.gitignore`). Файл `medicine_dataset.csv`
-кладуть у корінь проєкту, після чого запускають скрипт підготовки
-(Додаток А звіту):
+Датасет «250k Medicines Usage, Side Effects and Substitutes» (Kaggle) у git не зберігається.
+Покладіть `medicine_dataset.csv` у корінь проєкту і запустіть:
 
 ```
 python scripts/process_dataset.py
 ```
 
-Скрипт виводить аудит датасету (цифри розділу 2.1.1) і створює в `prepared/`
-файли для кожного сховища (табл. 2.8): `medicines.jsonl`, `search_docs.jsonl`,
-`diseases.csv`, `symptoms.csv`, `treats.csv`, `causes.csv`, `analogs.csv`,
-`search_queries.csv`. Генерація відсутніх полів відтворювана (`seed = 42`).
+Скрипт виводить аудит (цифри розділу 2.1.1 звіту) і створює в `prepared/` файли для кожного
+сховища: `medicines.jsonl`, `search_docs.jsonl`, `diseases.csv`, `symptoms.csv`, `treats.csv`,
+`causes.csv`, `analogs.csv`, `search_queries.csv`. Генерація відсутніх полів відтворювана (`seed = 42`).
 
-## Docker: контрольний стенд (крок 6)
+## Контейнеризація
 
-Каталог `docker/`: `Dockerfile` (образ із кодом проєкту), `docker-compose.smoke.yml`
-(контейнери `app` і `mongo`), `smoke_check.py` (запис і читання в MongoDB).
-Потрібні Docker Desktop або Docker Engine з плагіном Compose. Команди з кореня проєкту:
-
-```
-docker compose -f docker/docker-compose.smoke.yml up --build --abort-on-container-exit --exit-code-from app
-cat logs/smoke.log                 # Windows (PowerShell): Get-Content logs\smoke.log
-docker compose -f docker/docker-compose.smoke.yml down      # видаляє контейнери, лог і дані лишаються
-docker compose -f docker/docker-compose.smoke.yml down -v   # те саме + видаляє том із даними MongoDB
-```
-
-Логи пишуться у `./logs` на хості (bind mount), дані MongoDB у іменованому томі `mongo_data`.
-Повний кластер (3 шарди, Elasticsearch, Neo4j, Redis, RabbitMQ) буде в кореневому
-`docker-compose.yml` на наступному етапі.
+Docker + Docker Compose дають однакове середовище для всієї команди і дозволяють підняти
+шардований кластер MongoDB разом з іншими БД на одному комп'ютері. Обґрунтування, схема
+розгортання і результати стенда наведено в звіті, п. 3.10. Цільовий склад кластера:
+`api`, `generator`, `ingest-worker` (один образ `medicine-app`), `mongos`, `configsvr`,
+`shard1–3`, `elasticsearch`, `neo4j`, `redis`, `rabbitmq`. Кожна БД має іменований том, а логи
+застосунку пишуться в `./logs`. Повний `docker-compose.yml` з'явиться разом із реалізацією адаптерів.
 
 ## Статус
 
-- [x] Скелет каталогів
-- [x] Domain
-- [x] Application
-- [x] Infrastructure
-- [x] Presentation
-- [x] Workers
+- [x] Скелет каталогів і класи всіх шарів (domain, application, infrastructure, presentation, workers)
+- [x] Підготовка датасету
+- [x] Автоматичні тести архітектури та генератор схем з датою
+- [x] Docker: власний образ і стенд app + MongoDB (запис, читання, логи на хості)
 - [ ] Реалізація адаптерів і обробників
-- [x] Docker: образ і контрольний стенд (app + mongo)
-- [ ] Docker Compose (повний кластер БД)
+- [ ] Повний `docker-compose.yml` (3 шарди MongoDB, Elasticsearch, Neo4j, Redis, RabbitMQ)
+- [ ] Веб-інтерфейс і генератор з керуванням швидкістю
 - [ ] Навантажувальне тестування
+- [ ] Фінальна схема взаємодії елементів
