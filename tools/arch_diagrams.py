@@ -459,11 +459,12 @@ def slice_names(model: Model, seeds: list[str], container: bool = True) -> set[s
 
 
 def diagram_slice(model: Model, seeds: list[str], title: str, today: str, name: str,
-                  container: bool = True) -> str:
-    names = slice_names(model, seeds, container)
+                  container: bool = True, methods: bool = False, extra: tuple[str, ...] = ()) -> str:
+    """Вертикальний зріз від seeds; extra - класи, що додаються до зрізу (наприклад, контролер)."""
+    names = slice_names(model, seeds, container) | {n for n in extra if n in model.classes}
     out = f'digraph {name} {{\n  rankdir=LR;\n{HEAD}'
     out += graph_label(title, today, True)
-    out += clusters(model, names, False, False) + class_edges(model, names)
+    out += clusters(model, names, False, methods) + class_edges(model, names)
     return out + "}\n"
 
 
@@ -474,9 +475,14 @@ def all_diagrams(model: Model, today: str) -> dict[str, str]:
         "03_ports_inbound": diagram_ports(model, today, "in"),
         "04_ports_outbound": diagram_ports(model, today, "out"),
         "05_search_slice": diagram_slice(model, ["SearchController"],
-                                         "Зріз «Пошук препаратів» (шлях запитів)", today, "search"),
+                                         "Зріз «Пошук препаратів» (шлях запитів)", today, "search",
+                                         methods=True),
         "06_ingest_slice": diagram_slice(model, ["IngestWorker", "LoadGenerator"],
                                          "Зріз «Запис документів» (шлях команд)", today, "ingest", container=False),
+        # ланцюжок із завдання п. 4: Controller -> (Facade = вхідний порт) -> Service -> Repository
+        "07_card_slice": diagram_slice(model, ["GetMedicineCard"],
+                                       "Зріз «Картка препарату»: Controller → вхідний порт → Handler → Repository → Adapter",
+                                       today, "card", methods=True, extra=("MedicineController",)),
     }
 
 
