@@ -3,12 +3,14 @@ import ast
 from pathlib import Path
 
 from app.domain.ports.outbound import (
-    CacheStore, DocumentRepository, GraphRepository, MetricsSink, QueuePublisher, SearchIndex,
+    CacheStore, DiseaseRepository, DocumentRepository, GraphRepository, MetricsSink,
+    QueuePublisher, SearchIndex, SymptomRepository,
 )
 from app.infrastructure.messaging import QueueAdapter
 from app.infrastructure.observability import MongoMetricsAdapter
 from app.infrastructure.persistence import (
-    MongoDocumentAdapter, Neo4jGraphAdapter, RedisCacheAdapter, SearchIndexAdapter,
+    MongoDocumentAdapter, Neo4jDiseaseAdapter, Neo4jGraphAdapter, Neo4jSymptomAdapter,
+    RedisCacheAdapter, SearchIndexAdapter,
 )
 
 INFRA = Path(__file__).resolve().parents[2] / "app" / "infrastructure"
@@ -25,6 +27,8 @@ def test_adapters_implement_ports():
     MongoDocumentAdapter(_FakeClient())
     SearchIndexAdapter(None)
     Neo4jGraphAdapter(None)
+    Neo4jDiseaseAdapter(None)
+    Neo4jSymptomAdapter(None)
     RedisCacheAdapter(None)
     MongoMetricsAdapter(_FakeClient())
     QueueAdapter("amqp://x")
@@ -34,6 +38,8 @@ def test_adapter_types():
     assert issubclass(MongoDocumentAdapter, DocumentRepository)
     assert issubclass(SearchIndexAdapter, SearchIndex)
     assert issubclass(Neo4jGraphAdapter, GraphRepository)
+    assert issubclass(Neo4jDiseaseAdapter, DiseaseRepository)
+    assert issubclass(Neo4jSymptomAdapter, SymptomRepository)
     assert issubclass(RedisCacheAdapter, CacheStore)
     assert issubclass(MongoMetricsAdapter, MetricsSink)
     assert issubclass(QueueAdapter, QueuePublisher)

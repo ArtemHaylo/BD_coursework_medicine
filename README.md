@@ -31,7 +31,7 @@ python -m pytest tests/unit -q
 ```
 
 Тести проходять без піднятих баз даних: адаптери в них лише створюються,
-з'єднання з БД не відкриваються. Очікуваний результат: `14 passed`.
+з'єднання з БД не відкриваються. Очікуваний результат: `15 passed`.
 
 П'ять файлів тестів стежать за архітектурою автоматично:
 
@@ -76,8 +76,14 @@ workers ── через порти ──────────────�
 ## Розміщення портів
 
 Вихідні порти (`app/domain/ports/outbound/`) оголошені в доменному шарі:
-без цього неможлива інверсія залежності від сховищ. Їх шість: `DocumentRepository`,
-`SearchIndex`, `GraphRepository`, `CacheStore`, `MetricsSink`, `QueuePublisher`.
+без цього неможлива інверсія залежності від сховищ. Їх вісім: `DocumentRepository`,
+`SearchIndex`, `GraphRepository`, `CacheStore`, `MetricsSink`, `QueuePublisher`,
+`DiseaseRepository`, `SymptomRepository`.
+
+CRUD-репозиторії: `DocumentRepository` (препарати, MongoDB), `DiseaseRepository` і
+`SymptomRepository` (довідники, вузли Neo4j). Для довідників CRUD охоплює лише самі
+вузли; ребра `ЛІКУЄ` та `ВИКЛИКАЄ` створює `GraphRepository.upsert_many`, а лічильник
+`drug_count` обчислюється з ребер і напряму не редагується.
 
 Вхідні порти (`app/application/ports/inbound/`) оголошені в шарі сценаріїв,
 бо їхній контракт оперує DTO, а не доменними сутностями. Їх десять:
@@ -94,24 +100,24 @@ workers ── через порти ──────────────�
 |---|---|---|
 | Domain, сутності | `Medicine`, `Disease`, `Symptom`, `SearchLogEntry`, `SearchDocument`, `SearchHit` | предметна модель |
 | Domain, служби | `QueryNormalizer`, `DocumentValidator`, `ShardKeyService`, `ShardKey` | правила, що не належать жодній сутності |
-| Domain, порти | `DocumentRepository`, `SearchIndex`, `GraphRepository`, `CacheStore`, `MetricsSink`, `QueuePublisher` | контракти до сховищ |
+| Domain, порти | `DocumentRepository`, `SearchIndex`, `GraphRepository`, `CacheStore`, `MetricsSink`, `QueuePublisher`, `DiseaseRepository`, `SymptomRepository` | контракти до сховищ |
 | Application, команди | `IngestDocumentHandler`, `ConfigureRateHandler`, `CreateMedicineHandler`, `UpdateMedicineHandler`, `DeleteMedicineHandler` | шлях запису |
 | Application, запити | `SearchMedicinesHandler`, `GetMedicineCardHandler`, `GetAnaloguesHandler`, `ListMedicinesHandler`, `GetStatsHandler` | шлях читання |
 | Application, DTO | `SearchQuery`, `SearchResult`, `MedicineCard`, `MedicineCreateDto`, `MedicineUpdateDto`, `AnalogueDto`, `IngestBatchDto`, `RateConfigDto`, `StatsDto` та ін. (16) | межові об'єкти передачі даних |
-| Infrastructure | `MongoDocumentAdapter`, `SearchIndexAdapter`, `Neo4jGraphAdapter`, `RedisCacheAdapter`, `MongoMetricsAdapter`, `QueueAdapter` | реалізації портів |
+| Infrastructure | `MongoDocumentAdapter`, `SearchIndexAdapter`, `Neo4jGraphAdapter`, `Neo4jDiseaseAdapter`, `Neo4jSymptomAdapter`, `RedisCacheAdapter`, `MongoMetricsAdapter`, `QueueAdapter` | реалізації портів |
 | Infrastructure, config | `Container`, `Settings` | композиційний корінь, налаштування |
 | Presentation | `SearchController`, `MedicineController`, `AnaloguesController`, `RateController`, `StatsStreamController` | REST і SSE |
 | Workers | `LoadGenerator`, `IngestWorker` | окремі процеси |
 
-Стан на 10.10.2026: 59 модулів, 78 класів, 10 вхідних і 6 вихідних портів,
-10 обробників, 14 автоматичних тестів.
+Стан на 10.10.2026: 63 модулі, 82 класи, 10 вхідних і 8 вихідних портів,
+10 обробників, 15 автоматичних тестів.
 
 ## Застосовані патерни
 
 | Патерн | Де | Навіщо |
 |---|---|---|
 | Порти й адаптери | `domain/ports`, `application/ports`, `infrastructure` | заміна сховища без дотику до логіки |
-| CRUD-репозиторій | `DocumentRepository` | єдиний контракт створення, читання, оновлення, видалення |
+| CRUD-репозиторій | `DocumentRepository`, `DiseaseRepository`, `SymptomRepository` | єдиний контракт створення, читання, оновлення, видалення |
 | CQRS | `application/commands`, `application/queries` | різні шляхи й моделі для запису та читання |
 | DTO | `application/dto` | межові об'єкти, що не тягнуть доменні сутності |
 | Відображення | `application/mappers.py` | перетворення Domain ↔ DTO в одному місці |
