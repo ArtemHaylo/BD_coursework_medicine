@@ -10,8 +10,8 @@ from uuid import UUID
 class SearchLogEntry:
     query_id: UUID
     raw_query: str
-    normalized_query: str           # ключ кешу
-    results_count: int              # 0 -> статус «Пусто»
+    normalized_query: str           
+    results_count: int              
     cache_hit: bool
     latency_ms: int
     created_at: datetime
