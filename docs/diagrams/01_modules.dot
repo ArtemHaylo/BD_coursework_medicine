@@ -1,0 +1,74 @@
+digraph modules {
+  rankdir=LR;
+  graph [fontname="DejaVu Sans", fontsize=11, labelloc=t, pad=0.3, nodesep=0.35, ranksep=0.7];
+  node [fontname="DejaVu Sans", fontsize=10];
+  edge [fontname="DejaVu Sans", fontsize=9, color="#555555"];
+  label=<<B>Взаємодія модулів коду та правило залежностей</B><BR/><FONT POINT-SIZE="10">схему згенеровано з коду: 10.10.2026</FONT>>;
+  node [shape=box, style="rounded,filled"];
+  subgraph "cluster_application" { label="Application"; style="rounded,filled"; fillcolor="#E2F3E455"; color="#2E7D32";
+    "app.application.commands" [fillcolor="#E2F3E4", color="#2E7D32", label="application.commands"];
+    "app.application.constants" [fillcolor="#E2F3E4", color="#2E7D32", label="application.constants"];
+    "app.application.dto" [fillcolor="#E2F3E4", color="#2E7D32", label="application.dto"];
+    "app.application.mappers" [fillcolor="#E2F3E4", color="#2E7D32", label="application.mappers"];
+    "app.application.ports" [fillcolor="#E2F3E4", color="#2E7D32", label="application.ports"];
+    "app.application.queries" [fillcolor="#E2F3E4", color="#2E7D32", label="application.queries"];
+  }
+  subgraph "cluster_domain" { label="Domain"; style="rounded,filled"; fillcolor="#FFF3D655"; color="#B8860B";
+    "app.domain.entities" [fillcolor="#FFF3D6", color="#B8860B", label="domain.entities"];
+    "app.domain.ports" [fillcolor="#FFF3D6", color="#B8860B", label="domain.ports"];
+    "app.domain.services" [fillcolor="#FFF3D6", color="#B8860B", label="domain.services"];
+  }
+  subgraph "cluster_config" { label="Композиційний корінь"; style="rounded,filled"; fillcolor="#F7D9D955"; color="#8E2B2B";
+    "app.infrastructure.config" [fillcolor="#F7D9D9", color="#8E2B2B", label="infrastructure.config"];
+  }
+  subgraph "cluster_infrastructure" { label="Infrastructure"; style="rounded,filled"; fillcolor="#FBE3E355"; color="#B23A3A";
+    "app.infrastructure.messaging" [fillcolor="#FBE3E3", color="#B23A3A", label="infrastructure.messaging"];
+    "app.infrastructure.observability" [fillcolor="#FBE3E3", color="#B23A3A", label="infrastructure.observability"];
+    "app.infrastructure.persistence" [fillcolor="#FBE3E3", color="#B23A3A", label="infrastructure.persistence"];
+    "app.infrastructure.settings" [fillcolor="#FBE3E3", color="#B23A3A", label="infrastructure.settings"];
+  }
+  subgraph "cluster_entry" { label="Точка входу"; style="rounded,filled"; fillcolor="#EEEEEE55"; color="#666666";
+    "app.main" [fillcolor="#EEEEEE", color="#666666", label="main"];
+  }
+  subgraph "cluster_presentation" { label="Presentation"; style="rounded,filled"; fillcolor="#E3ECFB55"; color="#2F5DA8";
+    "app.presentation.rest" [fillcolor="#E3ECFB", color="#2F5DA8", label="presentation.rest"];
+    "app.presentation.stream" [fillcolor="#E3ECFB", color="#2F5DA8", label="presentation.stream"];
+  }
+  subgraph "cluster_workers" { label="Workers"; style="rounded,filled"; fillcolor="#EBE3F755"; color="#6A4BA3";
+    "workers.generator" [fillcolor="#EBE3F7", color="#6A4BA3", label="workers.generator"];
+    "workers.ingest_worker" [fillcolor="#EBE3F7", color="#6A4BA3", label="workers.ingest_worker"];
+  }
+  "app.application.commands" -> "app.application.constants" [penwidth=1.15];
+  "app.application.commands" -> "app.application.dto" [penwidth=1.60];
+  "app.application.commands" -> "app.application.ports" [penwidth=1.75];
+  "app.application.commands" -> "app.domain.ports" [penwidth=1.75];
+  "app.application.commands" -> "app.domain.services" [penwidth=1.45];
+  "app.application.mappers" -> "app.application.dto" [penwidth=1.30];
+  "app.application.mappers" -> "app.domain.entities" [penwidth=1.30];
+  "app.application.ports" -> "app.application.dto" [penwidth=1.90];
+  "app.application.queries" -> "app.application.dto" [penwidth=1.75];
+  "app.application.queries" -> "app.application.ports" [penwidth=1.75];
+  "app.application.queries" -> "app.domain.ports" [penwidth=1.75];
+  "app.application.queries" -> "app.domain.services" [penwidth=1.15];
+  "app.domain.ports" -> "app.domain.entities" [penwidth=1.60];
+  "app.domain.services" -> "app.domain.entities" [penwidth=1.30];
+  "app.infrastructure.config" -> "app.application.commands" [penwidth=1.15];
+  "app.infrastructure.config" -> "app.application.queries" [penwidth=1.15];
+  "app.infrastructure.config" -> "app.infrastructure.messaging" [penwidth=1.15];
+  "app.infrastructure.config" -> "app.infrastructure.observability" [penwidth=1.15];
+  "app.infrastructure.config" -> "app.infrastructure.persistence" [penwidth=1.15];
+  "app.infrastructure.config" -> "app.infrastructure.settings" [penwidth=1.30];
+  "app.infrastructure.messaging" -> "app.domain.ports" [penwidth=1.15];
+  "app.infrastructure.observability" -> "app.domain.entities" [penwidth=1.15];
+  "app.infrastructure.observability" -> "app.domain.ports" [penwidth=1.15];
+  "app.infrastructure.observability" -> "app.infrastructure.settings" [penwidth=1.15];
+  "app.infrastructure.persistence" -> "app.domain.entities" [penwidth=1.45];
+  "app.infrastructure.persistence" -> "app.domain.ports" [penwidth=1.60];
+  "app.presentation.rest" -> "app.application.dto" [penwidth=1.60];
+  "app.presentation.rest" -> "app.application.ports" [penwidth=1.60];
+  "app.presentation.stream" -> "app.application.dto" [penwidth=1.15];
+  "app.presentation.stream" -> "app.application.ports" [penwidth=1.15];
+  "workers.generator" -> "app.application.constants" [penwidth=1.15];
+  "workers.generator" -> "app.domain.ports" [penwidth=1.15];
+  "workers.ingest_worker" -> "app.application.ports" [penwidth=1.15];
+}

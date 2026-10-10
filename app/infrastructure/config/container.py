@@ -13,7 +13,7 @@ from app.application.queries import (
     GetAnaloguesHandler, GetMedicineCardHandler, GetStatsHandler,
     ListMedicinesHandler, SearchMedicinesHandler,
 )
-from app.infrastructure.config.settings import Settings
+from app.infrastructure.settings import Settings
 from app.infrastructure.messaging import QueueAdapter
 from app.infrastructure.observability import MongoMetricsAdapter
 from app.infrastructure.persistence import (

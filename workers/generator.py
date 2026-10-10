@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from app.application.commands.configure_rate_handler import RATE_KEY
+from app.application.constants import RATE_KEY
 from app.domain.ports.outbound import CacheStore, QueuePublisher
 
 

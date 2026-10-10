@@ -1,7 +1,7 @@
 """Налаштування логування: рівень береться з конфігурації без зміни коду."""
 from __future__ import annotations
 
-from app.infrastructure.config.settings import LoggingSettings
+from app.infrastructure.settings import LoggingSettings
 
 
 def setup_logging(settings: LoggingSettings) -> None:
