@@ -1,0 +1,35 @@
+# Контрольний стенд кроку 6: контейнер app (наш образ) + контейнер mongo (офіційний образ).
+# Запуск із кореня репозиторію:
+#   docker compose -f docker/docker-compose.smoke.yml up --build --abort-on-container-exit --exit-code-from app
+name: medicine-smoke
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: smoke-mongo
+    volumes:
+      - mongo_data:/data/db            # дані БД переживають видалення контейнера
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build:
+      context: ..                      # корінь репозиторію, щоб COPY бачив app/ та workers/
+      dockerfile: docker/Dockerfile
+    image: medicine-app:0.1
+    container_name: smoke-app
+    depends_on:
+      mongo:
+        condition: service_healthy     # app стартує, коли mongo пройшла healthcheck
+    environment:
+      MONGO_URI: mongodb://mongo:27017 # "mongo" - ім'я сервісу, DNS мережі compose
+      LOG_PATH: /app/logs/smoke.log
+    volumes:
+      - ../logs:/app/logs              # bind mount: логи з'являються в ./logs на вашому комп'ютері
+
+volumes:
+  mongo_data:
