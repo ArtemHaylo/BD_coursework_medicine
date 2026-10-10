@@ -25,7 +25,7 @@ def test_every_port_has_implementation_and_every_handler_a_port():
 
 def test_diagrams_are_built_from_current_code():
     diagrams = arch.all_diagrams(MODEL, "01.01.2026")
-    assert len(diagrams) == 6
+    assert len(diagrams) == 7
     for name, dot in diagrams.items():
         assert dot.startswith("digraph"), name
         assert "01.01.2026" in dot, name        # дата стоїть на кожній схемі
