@@ -30,3 +30,6 @@ Thumbs.db
 
 # Docker volumes
 data/
+
+# Логи контейнерів (крок 6)
+logs/

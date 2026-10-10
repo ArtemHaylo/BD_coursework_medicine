@@ -31,9 +31,9 @@ python -m pytest tests/unit -q
 ```
 
 Тести проходять без піднятих баз даних: адаптери в них лише створюються,
-з'єднання з БД не відкриваються. Очікуваний результат: `18 passed`.
+з'єднання з БД не відкриваються. Очікуваний результат: `14 passed`.
 
-Шість файлів тестів стежать за архітектурою автоматично:
+П'ять файлів тестів стежать за архітектурою автоматично:
 
 | Тест | Що гарантує |
 |---|---|
@@ -42,7 +42,6 @@ python -m pytest tests/unit -q
 | `test_infrastructure.py` | кожен адаптер реалізує всі методи свого вихідного порту (інакше `TypeError` при створенні); адаптери не імпортують `application` і `presentation` |
 | `test_presentation.py` | усі очікувані REST-маршрути зареєстровані; контролери не імпортують `infrastructure` |
 | `test_workers.py` | воркери створюються з портів і не імпортують конкретні адаптери |
-| `test_diagrams.py` | правило шарів виконується в усьому коді, між пакетами немає циклів, кожен порт має реалізацію, кожен вхідний порт має рівно один обробник; схеми будуються з поточного коду |
 
 ## Схема шарів
 
@@ -64,14 +63,12 @@ workers ── через порти ──────────────�
 |---|---|---|
 | `app/domain` | предметна область | нічого |
 | `app/application` | сценарії, вхідні порти, DTO | `domain` |
-| `app/infrastructure` | адаптери БД, черги, логування, `settings.py` | `domain` |
-| `app/infrastructure/config` | композиційний корінь (`Container`) | усі шари |
+| `app/infrastructure` | адаптери БД, черги, логування | `domain` |
+| `app/infrastructure/config` | композиційний корінь, налаштування | усі шари |
 | `app/presentation` | REST-контролери, SSE | `application` (і доменні винятки) |
 | `app/main.py` | точка входу API-процесу | усі шари |
 | `workers` | окремі процеси: generator, ingest_worker | порти `domain` і `application`; `Container` лише в `main()` |
 | `tests/unit` | модульні тести | |
-| `tools` | генератор схем архітектури з коду | лише стандартна бібліотека |
-| `docs/diagrams` | згенеровані схеми (DOT, PNG, SVG) і `summary.json` | |
 | `tests/integration` | інтеграційні тести з реальними БД (на наступних етапах) | |
 | `scripts` | підготовка датасету (Додаток А звіту) | |
 | `prepared` | підготовлені файли для завантаження (не в git) | |
@@ -106,8 +103,8 @@ workers ── через порти ──────────────�
 | Presentation | `SearchController`, `MedicineController`, `AnaloguesController`, `RateController`, `StatsStreamController` | REST і SSE |
 | Workers | `LoadGenerator`, `IngestWorker` | окремі процеси |
 
-Стан на 10.10.2026: 60 модулів, 78 класів, 10 вхідних і 6 вихідних портів,
-10 обробників, 17 реалізацій портів, 18 автоматичних тестів.
+Стан на 10.10.2026: 59 модулів, 78 класів, 10 вхідних і 6 вихідних портів,
+10 обробників, 14 автоматичних тестів.
 
 ## Застосовані патерни
 
@@ -123,32 +120,6 @@ workers ── через порти ──────────────�
 | Композиційний корінь | `infrastructure/config/container.py` | єдине місце, що знає конкретні реалізації |
 | Протокол (структурна типізація) | `BatchSource` у `workers/ingest_worker.py` | воркер не залежить від конкретного адаптера черги |
 | Черга повідомлень | `QueueAdapter` | розв'язує різницю швидкостей генератора й запису |
-
-## Схеми
-
-```
-python tools/arch_diagrams.py --out docs/diagrams --date 10.10.2026
-python tools/arch_diagrams.py --check
-```
-
-Скрипт будує схеми безпосередньо з вихідного коду й ставить на кожній дату
-(без `--date` бере сьогоднішню). PNG і SVG створюються, якщо встановлено
-Graphviz (команда `dot`); без нього лишаються лише `.dot`. Параметр `--check`
-нічого не малює, а перевіряє правило залежностей, цикли між пакетами та
-контракти портів і завершується з кодом 1 при порушеннях.
-
-| Файл | Вміст |
-|---|---|
-| `docs/diagrams/01_modules` | взаємодія модулів; порушення правила шарів позначаються червоним |
-| `docs/diagrams/02_domain_model` | сутності, доменні служби, об'єкт-значення, винятки |
-| `docs/diagrams/03_ports_inbound` | контролери, вхідні порти, обробники |
-| `docs/diagrams/04_ports_outbound` | вихідні порти й адаптери |
-| `docs/diagrams/05_search_slice` | зріз «Пошук препаратів» (шлях запитів) |
-| `docs/diagrams/06_ingest_slice` | зріз «Запис документів» (шлях команд) |
-| `docs/diagrams/summary.json` | кількісна зведенка та результати перевірок |
-
-Після завершення проєкту схеми перегенеровують однією командою для
-фінальної редакції звіту.
 
 ## Підготовка даних
 
@@ -166,6 +137,23 @@ python scripts/process_dataset.py
 `diseases.csv`, `symptoms.csv`, `treats.csv`, `causes.csv`, `analogs.csv`,
 `search_queries.csv`. Генерація відсутніх полів відтворювана (`seed = 42`).
 
+## Docker: контрольний стенд (крок 6)
+
+Каталог `docker/`: `Dockerfile` (образ із кодом проєкту), `docker-compose.smoke.yml`
+(контейнери `app` і `mongo`), `smoke_check.py` (запис і читання в MongoDB).
+Потрібні Docker Desktop або Docker Engine з плагіном Compose. Команди з кореня проєкту:
+
+```
+docker compose -f docker/docker-compose.smoke.yml up --build --abort-on-container-exit --exit-code-from app
+cat logs/smoke.log                 # Windows (PowerShell): Get-Content logs\smoke.log
+docker compose -f docker/docker-compose.smoke.yml down      # видаляє контейнери, лог і дані лишаються
+docker compose -f docker/docker-compose.smoke.yml down -v   # те саме + видаляє том із даними MongoDB
+```
+
+Логи пишуться у `./logs` на хості (bind mount), дані MongoDB у іменованому томі `mongo_data`.
+Повний кластер (3 шарди, Elasticsearch, Neo4j, Redis, RabbitMQ) буде в кореневому
+`docker-compose.yml` на наступному етапі.
+
 ## Статус
 
 - [x] Скелет каталогів
@@ -174,7 +162,7 @@ python scripts/process_dataset.py
 - [x] Infrastructure
 - [x] Presentation
 - [x] Workers
-- [x] Схеми архітектури та перевірка залежностей (10.10.2026)
 - [ ] Реалізація адаптерів і обробників
-- [ ] Docker Compose (кластер БД)
+- [x] Docker: образ і контрольний стенд (app + mongo)
+- [ ] Docker Compose (повний кластер БД)
 - [ ] Навантажувальне тестування
